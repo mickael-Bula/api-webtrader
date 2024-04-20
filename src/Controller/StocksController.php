@@ -3,7 +3,6 @@
 namespace App\Controller;
 
 use JsonException;
-use App\Entity\Cac;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -40,16 +39,17 @@ class StocksController extends AbstractController
         // Transforme les données json en tableau php
         $jsonData = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
 
+        // NOTE : Je dois décoder deux fois en raison des guillemets encodés dans l'app (pas depuis Postman...)
         if (!is_array($jsonData)) {
             $jsonData = json_decode($jsonData, true, 512, JSON_THROW_ON_ERROR);
         }
 
         // Itère sur chaque élément du tableau 'data'
         foreach ($jsonData as $item) {
-            // Convertit chaque élément en une chaîne JSON
+            // Reconvertit chaque élément en une chaîne JSON attendue par le serializer
             $jsonItem = json_encode($item, JSON_THROW_ON_ERROR);
 
-            // Désérialise chaque élément en un objet Cac
+            // Désérialise chaque élément en un objet Stock
             $stockObject = $serializer->deserialize(
                 $jsonItem,
                 $className,
@@ -73,10 +73,10 @@ class StocksController extends AbstractController
         }
         try {
             $em->flush();
-            $successMessage = "Les données ont été insérées avec succès !";
+            $successMessage = 'LES DONNEES ONT ETE INSEREES AVEC SUCCES !' . PHP_EOL;
             return $this->json($successMessage, 201);
         } catch (\Exception $e) {
-            $errorMessage = "Une erreur est survenue lors de l'insertion en base de données : " . $e->getMessage();
+            $errorMessage = "Une erreur est survenue lors de l'insertion en base de données : " . $e->getMessage() . PHP_EOL;
             return $this->json($errorMessage, 500);
         }
 

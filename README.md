@@ -55,14 +55,57 @@ Le header est déclaré avec Content-Type : application/json
 }
 ```
 
+## Désérialisation
+
+Il s'agit du processus de conversion des données récupérées au format json en objet de la classe Entity.
+Pour faire cette conversion à la volée :
+
+1 - on convertit les données reçues dans la requête vers le format php :
+
+```php
+$jsonData = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+```
+
+2 - on boucle sur les résultats
+
+```php
+foreach ($jsonData as $item) {
+```
+
+3 - on reconvertit au format json attendu pour la désérialisation
+
+```php
+$jsonItem = json_encode($item, JSON_THROW_ON_ERROR);
+```
+
+4 - on désérialise
+
+```php
+$stockObject = $serializer->deserialize(
+    $jsonItem,
+    $className,
+    'json'
+);
+```
+
+4 - on valide les données avant enregistrement, en lien avec les attributs placés sur les propriétés des entités
+
+```php
+$violations = $validator->validate($stockObject);
+
+if (count($violations) > 0) {
+    $errors = [];
+    foreach ($violations as $violation) {
+        $errors[] = $violation->getMessage();
+    }
+    return $this->json(['errors' => $errors], Response::HTTP_BAD_REQUEST);
+}
+```
+
 ## Gérer la communication entre les applications
 
-Les données issues du scraping doivent être envoyées depuis **webtrader_CI** vers **api-webtrader**?
+Les données issues du scraping sont envoyées vers l'API. Il faut donc veiller à la communication inter-applicative.
 
-Il faut donc que les serveurs des applications soient lancés en même temps.
-Pour faciliter le processus, il serait bon de les déployer au sein de conteneurs.
-On pourra ensuite ajouter un docker compose pour lancer les applis avec une seule commande.
+Le fait d'utiliser Laragon a cet avantage que des virtual hosts sont systématiquement créés avec un clic.
 
-Les données pourront être conservées dans des BDD dont le moteur sera un conteneur et avec un volume associé.
-
-Il faut donc créer un conteneur à partir de l'appli Symfony.
+En outre, l'application consistant en une commande Symfony peut être lancée sans serveur web.

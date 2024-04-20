@@ -2,9 +2,13 @@
 
 namespace App\Entity;
 
+use DateTime;
 use App\Repository\CacRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Context;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Serializer\Normalizer\DateTimeNormalizer;
 
 #[ORM\Entity(repositoryClass: CacRepository::class)]
 class Cac
@@ -13,6 +17,10 @@ class Cac
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    #[Context([DateTimeNormalizer::FORMAT_KEY => 'd/m/Y'])]
+    private ?\DateTimeInterface $createdAt = null;
 
     #[ORM\Column]
     #[Assert\NotBlank]
@@ -83,6 +91,18 @@ class Cac
     public function setLower(float $lower): static
     {
         $this->lower = $lower;
+
+        return $this;
+    }
+
+    public function getCreatedAt(): ?\DateTimeInterface
+    {
+        return $this->createdAt;
+    }
+
+    public function setCreatedAt(\DateTimeInterface $createdAt): static
+    {
+        $this->createdAt = $createdAt;
 
         return $this;
     }
