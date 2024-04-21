@@ -102,6 +102,12 @@ if (count($violations) > 0) {
 }
 ```
 
+## Installation de la sécurité de l'API
+
+J'opte pour JWT avec le bundle `lexik/jwt-authentication-bundle`
+
+>NOTE : l'installation du paquet requiert que l'extension sodium soit activée dans le fichier php.ini
+
 ## Gérer la communication entre les applications
 
 Les données issues du scraping sont envoyées vers l'API. Il faut donc veiller à la communication inter-applicative.
