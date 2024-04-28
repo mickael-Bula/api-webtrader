@@ -23,7 +23,7 @@ class StocksController extends AbstractController
      * @return JsonResponse
      * @throws JsonException
      */
-    #[Route('/stocks/{stock}', name: 'app_stocks', methods: ['POST'])]
+    #[Route('/api/stocks/{stock}', name: 'app_stocks', methods: ['POST'])]
     public function update(
         EntityManagerInterface $em,
         Request                $request,
@@ -68,7 +68,7 @@ class StocksController extends AbstractController
                 return $this->json(['errors' => $errors], Response::HTTP_BAD_REQUEST);
             }
 
-            // Ajoute le suivi de l'objet désérialisé
+            // Ajoute le suivi, dans Doctrine, de l'objet désérialisé
             $em->persist($stockObject);
         }
         try {
@@ -79,6 +79,5 @@ class StocksController extends AbstractController
             $errorMessage = "Une erreur est survenue lors de l'insertion en base de données : " . $e->getMessage() . PHP_EOL;
             return $this->json($errorMessage, 500);
         }
-
     }
 }

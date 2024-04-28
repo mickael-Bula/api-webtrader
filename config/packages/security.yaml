@@ -1,0 +1,29 @@
+# config/packages/security.yaml
+security:
+    enable_authenticator_manager: true
+
+    providers:
+        fake_user_provider:
+            id: App\Security\FakeUserProvider
+
+    password_hashers:
+        App\Security\FakeUser:
+            algorithm: plaintext
+
+    firewalls:
+        login:
+            pattern: ^/api/login
+            stateless: true
+            json_login:
+                check_path: /api/login_check
+                success_handler: lexik_jwt_authentication.handler.authentication_success
+                failure_handler: lexik_jwt_authentication.handler.authentication_failure
+
+        api:
+            pattern:   ^/api
+            stateless: true
+            jwt: ~
+
+    access_control:
+        - { path: ^/api/login, roles: PUBLIC_ACCESS }
+        - { path: ^/api,       roles: IS_AUTHENTICATED_FULLY }
