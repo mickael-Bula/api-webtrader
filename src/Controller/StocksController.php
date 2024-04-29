@@ -5,6 +5,7 @@ namespace App\Controller;
 use JsonException;
 use App\Entity\Cac;
 use App\Entity\Lvc;
+use App\Entity\Stock;
 use App\Repository\CacRepository;
 use App\Repository\LvcRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -48,7 +49,7 @@ class StocksController extends AbstractController
                 $repository = $em->getRepository(Lvc::class);
                 break;
             default:
-                return new JsonResponse(['error' => 'Le type stock est invalide'], Response::HTTP_BAD_REQUEST);
+                return new JsonResponse(['error' => "Le type 'stock' est invalide"], Response::HTTP_BAD_REQUEST);
         }
 
         // Récupère la date max en base pour comparaison
@@ -62,45 +63,33 @@ class StocksController extends AbstractController
             $jsonData = json_decode($jsonData, true, 512, JSON_THROW_ON_ERROR);
         }
 
-        // On déclare le tableau devant recevoir les données les plus récentes
+        // Tableau des données à insérer
         $newData = [];
 
-        // Itère sur chaque élément du tableau 'data'
         foreach ($jsonData as $item) {
-            // Reconvertit chaque élément en une chaîne JSON attendue par le serializer
-            $jsonItem = json_encode($item, JSON_THROW_ON_ERROR);
-
             // Désérialise chaque élément en un objet Stock
-            $stockObject = $serializer->deserialize(
-                $jsonItem,
-                $className,
-                'json'
-            );
+            $stockObject = $this->deserializeObject($serializer, $item, $className);
 
+            // Formate la propriété createdAt pour la comparer avec la date la plus récente en BDD
             $currentDate = $stockObject->getCreatedAt()->format('Y-m-d');
 
             // On récupère les lignes dont la date est postérieure à $maxDate
-            if (!is_null($maxDate) && $currentDate >= $maxDate) {
+            if (!is_null($maxDate) && $maxDate >= $currentDate) {
                 break;
             }
-            $newData[] = $item;
 
-            // Validation des données
-            $violations = $validator->validate($stockObject);
+            $newData[] = $stockObject;
 
-            // Si des violations sont détectées, renvoyer une réponse d'erreur
+            // Si des violations sont détectées, renvoie une réponse d'erreur
+            $violations = $this->validator($validator, $stockObject);
             if (count($violations) > 0) {
-                $errors = [];
-                foreach ($violations as $violation) {
-                    $errors[] = $violation->getMessage();
-                }
-                return $this->json(['errors' => $errors], Response::HTTP_BAD_REQUEST);
+                return $this->json(['errors' => $violations], Response::HTTP_BAD_REQUEST);
             }
         }
 
         // Si le tableau de données à insérer est vide, on retourne un message approprié
-        if (!is_array($newData) || count($newData) === 0) {
-            $finalMessage = 'BASE A JOUR : AUCUNE DONNEE INSEREE';
+        if (count($newData) === 0) {
+            $finalMessage = "ENTITE $className A JOUR : AUCUNE DONNEE INSEREE";
 
             return $this->json($finalMessage);
         }
@@ -123,5 +112,46 @@ class StocksController extends AbstractController
 
             return $this->json($errorMessage, 500);
         }
+    }
+
+    /**
+     * @param SerializerInterface $serializer
+     * @param array $item
+     * @param string $className
+     * @return Stock Objet Cac ou Lvc
+     * @throws JsonException
+     */
+    private function deserializeObject(SerializerInterface $serializer, array $item, string $className): Stock
+    {
+        // Reconvertit chaque élément en une chaîne JSON (attendue par le serializer)
+        $jsonItem = json_encode($item, JSON_THROW_ON_ERROR);
+
+        // Désérialise chaque élément en un objet Stock
+        return $serializer->deserialize(
+            $jsonItem,
+            $className,
+            'json'
+        );
+    }
+
+    /**
+     * Renvoie un tableau d'erreurs si des violations sont détectées
+     * @param ValidatorInterface $validator
+     * @param Stock $stockObject Objet Cac ou Lvc
+     * @return array
+     */
+    private function validator(ValidatorInterface $validator, Stock $stockObject): array
+    {
+        $violations = $validator->validate($stockObject);
+
+        if (count($violations) > 0) {
+            $errors = [];
+            foreach ($violations as $violation) {
+                $errors[] = $violation->getMessage();
+            }
+
+            return $errors;
+        }
+        return [];
     }
 }

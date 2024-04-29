@@ -115,3 +115,19 @@ Les données issues du scraping sont envoyées vers l'API. Il faut donc veiller 
 Le fait d'utiliser Laragon a cet avantage que des virtual hosts sont systématiquement créés avec un clic.
 
 En outre, l'application consistant en une commande Symfony peut être lancée sans serveur web.
+
+## Utilisation d'une classe mère pour les entités
+
+Les entités Cac et Lvc étant identiques, j'ai rassemblé le code commun dans une classe mère abstraite `Stock`.
+
+Cependant, pour que l'héritage fonctionne sans casser le mappage des entités avec les tables de la base,
+il faut annoter de manière spécifique les classes mère et enfants :
+
+- dans la classe mère, ajouter un attribut `#[ORM\MappedSuperclass]` 
+- dans les classes enfants, ajouter l'attribut `#[ORM\Table(name: "cac")]` (pour Cac et adapter pour la classe Lvc)
+
+Cela indique à doctrine que la classe Stock est une classe contenant des propriétés qui ne sont pas mappées,
+du moins pas avec une table Stock, mais que celles-ci sont héritées par les classes enfants,
+dont le mappage est renseigné avec l'annotation `ORM\Table()`.
+
+Avec cette astuce, j'ai toutes les propriétés déclarées dans la classe Stock et des classes Cac et Lvc vides.
