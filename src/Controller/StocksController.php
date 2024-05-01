@@ -11,8 +11,10 @@ use Psr\Log\LoggerInterface;
 use App\Repository\CacRepository;
 use App\Repository\LvcRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Validator\Validation;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints\Regex;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -38,7 +40,7 @@ class StocksController extends AbstractController
      * @return JsonResponse
      * @throws JsonException
      */
-    #[Route('/api/stocks/{stock}', name: 'app_stocks', methods: ['POST'])]
+    #[Route('/api/stocks/{stock}', methods: ['POST'])]
     public function update(
         Request                $request,
         SerializerInterface    $serializer,
@@ -125,7 +127,7 @@ class StocksController extends AbstractController
     /**
      * @return JsonResponse
      */
-    #[Route('/api/stocks/stocks', name: 'app_all_stocks', methods: ['GET'])]
+    #[Route('/api/stocks/stocks', methods: ['GET'])]
     public function getStocks(): JsonResponse
     {
         $stocks = [];
@@ -138,10 +140,45 @@ class StocksController extends AbstractController
                     'Une erreur s\'est produite lors de la récupération des données : %s',
                     $e->getMessage())
                 );
-                return $this->json(['error' => 'Une erreur s\'est produite lors de la récupération des données.']);
+                return $this->json(
+                    ['error' => 'Une erreur s\'est produite lors de la récupération des données.'],
+                    Response::HTTP_BAD_REQUEST
+                );
             }
         }
         return $this->json($stocks);
+    }
+
+    /**
+     * @param $stock
+     * @param $date
+     * @return JsonResponse
+     */
+    #[Route('/api/stocks/{stock}/{date}', methods: ['GET'])]
+    public function getStocksByDate($stock, $date): JsonResponse
+    {
+        if (!$this->isValidDateFormat($date)) {
+            $errorMessage = 'La date doit être au format yyyy-mm-dd';
+            $this->logger->error($errorMessage);
+
+            return $this->json(['error' => $errorMessage]);
+        }
+        switch ($stock) {
+            case 'cac':
+                $className = Cac::class;
+                break;
+            case 'lvc':
+                $className = Lvc::class;
+                break;
+            default:
+                return new JsonResponse(['error' => "Le type 'stock' est invalide"], Response::HTTP_BAD_REQUEST);
+        }
+        /** @var CacRepository|LvcRepository $repository */
+        $repository = $this->entityManager->getRepository($className);
+
+        $data = $repository->getStockDataByDate($date);
+
+        return $this->json($data);
     }
 
     /**
@@ -183,5 +220,18 @@ class StocksController extends AbstractController
             return $errors;
         }
         return [];
+    }
+
+    /**
+     * @param string $date
+     * @return bool
+     */
+    public function isValidDateFormat(string $date): bool
+     {
+        $validator = Validation::createValidator();
+         $errors = $validator->validate($date, [new Regex(['pattern' => '/^\d{4}-\d{2}-\d{2}$/'])]);
+
+        // Si aucune erreur de validation, la date est au bon format
+        return count($errors) === 0;
     }
 }

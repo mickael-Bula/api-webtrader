@@ -31,4 +31,18 @@ class CacRepository extends ServiceEntityRepository
             ->getQuery()
             ->getSingleScalarResult();
     }
+
+    /**
+     * @param $date
+     * @return mixed
+     */
+    public function getStockDataByDate($date): mixed
+    {
+        return $this->createQueryBuilder('c')
+            ->select('c')
+            ->andWhere('c.createdAt > :date')
+            ->setParameter(':date', $date)
+            ->getQuery()
+            ->getResult();
+    }
 }
