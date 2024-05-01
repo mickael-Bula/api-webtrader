@@ -2,10 +2,12 @@
 
 namespace App\Controller;
 
+use Exception;
 use JsonException;
 use App\Entity\Cac;
 use App\Entity\Lvc;
 use App\Entity\Stock;
+use Psr\Log\LoggerInterface;
 use App\Repository\CacRepository;
 use App\Repository\LvcRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -19,9 +21,17 @@ use Symfony\Component\Routing\Attribute\Route;
 
 class StocksController extends AbstractController
 {
+    private EntityManagerInterface $entityManager;
+    private LoggerInterface $logger;
+
+    public function __construct(EntityManagerInterface $entityManager, LoggerInterface $logger)
+    {
+        $this->entityManager = $entityManager;
+        $this->logger = $logger;
+    }
+
     /**
      * @param string $stock Le type de valeur
-     * @param EntityManagerInterface $em
      * @param Request $request
      * @param SerializerInterface $serializer
      * @param ValidatorInterface $validator
@@ -30,7 +40,6 @@ class StocksController extends AbstractController
      */
     #[Route('/api/stocks/{stock}', name: 'app_stocks', methods: ['POST'])]
     public function update(
-        EntityManagerInterface $em,
         Request                $request,
         SerializerInterface    $serializer,
         ValidatorInterface     $validator,
@@ -40,17 +49,15 @@ class StocksController extends AbstractController
         switch ($stock) {
             case 'cac':
                 $className = Cac::class;
-                /** @var CacRepository $repository */
-                $repository = $em->getRepository(Cac::class);
                 break;
             case 'lvc':
                 $className = Lvc::class;
-                /** @var LvcRepository $repository */
-                $repository = $em->getRepository(Lvc::class);
                 break;
             default:
                 return new JsonResponse(['error' => "Le type 'stock' est invalide"], Response::HTTP_BAD_REQUEST);
         }
+        /** @var CacRepository|LvcRepository $repository */
+        $repository = $this->entityManager->getRepository($className);
 
         // Récupère la date max en base pour comparaison
         $maxDate = $repository->getMaxCreatedAt();
@@ -89,7 +96,7 @@ class StocksController extends AbstractController
 
         // Si le tableau de données à insérer est vide, on retourne un message approprié
         if (count($newData) === 0) {
-            $finalMessage = "ENTITE $className A JOUR : AUCUNE DONNEE INSEREE";
+            $finalMessage = "ENTITÉ $className A JOUR : AUCUNE DONNEE INSÉRÉE";
 
             return $this->json($finalMessage);
         }
@@ -99,19 +106,42 @@ class StocksController extends AbstractController
 
         foreach ($newData as $row) {
             // Ajoute le suivi, dans Doctrine, de l'objet désérialisé
-            $em->persist($row);
+            $this->entityManager->persist($row);
         }
 
         try {
-            $em->flush();
-            $successMessage = 'LES DONNEES ONT ETE INSEREES AVEC SUCCES !';
+            $this->entityManager->flush();
+            $successMessage = 'LES DONNÉES ONT ÉTÉ INSÉRÉES AVEC SUCCÈS !';
 
             return $this->json($successMessage, 201);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $errorMessage = "Une erreur est survenue lors de l'insertion en base de données : " . $e->getMessage() . PHP_EOL;
+            $this->logger->error($errorMessage);
 
             return $this->json($errorMessage, 500);
         }
+    }
+
+    /**
+     * @return JsonResponse
+     */
+    #[Route('/api/stocks/stocks', name: 'app_all_stocks', methods: ['GET'])]
+    public function getStocks(): JsonResponse
+    {
+        $stocks = [];
+        foreach (['cac' => Cac::class, 'lvc' => Lvc::class] as $stock => $className) {
+            try {
+                $repo = $this->entityManager->getRepository($className);
+                $stocks[$stock] = $repo->findAll();
+            } catch (Exception $e) {
+                $this->logger->error(sprintf(
+                    'Une erreur s\'est produite lors de la récupération des données : %s',
+                    $e->getMessage())
+                );
+                return $this->json(['error' => 'Une erreur s\'est produite lors de la récupération des données.']);
+            }
+        }
+        return $this->json($stocks);
     }
 
     /**
