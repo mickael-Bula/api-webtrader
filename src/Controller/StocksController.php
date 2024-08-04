@@ -98,7 +98,7 @@ class StocksController extends AbstractController
 
         // Si le tableau de données à insérer est vide, on retourne un message approprié
         if (count($newData) === 0) {
-            $finalMessage = "ENTITÉ $className A JOUR : AUCUNE DONNEE INSÉRÉE";
+            $finalMessage = "ENTITÉ $className À JOUR : AUCUNE DONNEE INSÉRÉE";
 
             return $this->json($finalMessage);
         }
