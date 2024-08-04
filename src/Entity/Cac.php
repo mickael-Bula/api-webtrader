@@ -12,7 +12,7 @@ use Symfony\Component\Serializer\Normalizer\DateTimeNormalizer;
 #[ORM\Table(name: "cac")]   // Déclare explicitement la table mappée en raison de l'héritage
 class Cac extends Stock
 {
-    // La propriété createdAt n'a pas le même format pour les classes Cac et Lvc
+    // La propriété createdAt n'a pas nécessairement le même format pour les classes Cac et Lvc
     #[ORM\Column(type: Types::DATE_MUTABLE)]
     #[Context([DateTimeNormalizer::FORMAT_KEY => 'd/m/Y'])]
     protected ?\DateTimeInterface $createdAt = null;

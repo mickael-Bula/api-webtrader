@@ -116,6 +116,9 @@ Le fait d'utiliser Laragon a cet avantage que des virtual hosts sont systématiq
 
 En outre, l'application consistant en une commande Symfony peut être lancée sans serveur web.
 
+>NOTE : Pour tester le token JWT depuisPostman, il faut utiliser l'onglet Authorization, sélectionner
+> Bearer Token, puis coller le token dans le champ Token. Il ne faut donc pas utiliser les Headers
+
 ## Utilisation d'une classe mère pour les entités
 
 Les entités Cac et Lvc étant identiques, j'ai rassemblé le code commun dans une classe mère abstraite `Stock`.
